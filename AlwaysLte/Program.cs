@@ -106,12 +106,14 @@ namespace AlwaysLte
             }
             if (connectionType != RouterManager.ConnectionStatusType.LTE)
             {
+                logger.Info("Connection dropped to {0}. Switching.", RouterManager.ConnectionStatusType.Parse(connectionType));
                 // Switch to LTE
                 if (rm.Login())
                 {
                     rm.SwitchConnectionType(RouterManager.ConnectionSwitchType.LTE);
                     rm.SwitchConnectionType(RouterManager.ConnectionSwitchType.Auto);
                 }
+                logger.Info("Switching... Done!");
             }
         }
     }
