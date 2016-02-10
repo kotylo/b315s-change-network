@@ -56,12 +56,13 @@ namespace AlwaysLte
             {
                 RouterManager rm = new RouterManager();
 
-                try
+                var isInitialized = false;
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                while (true)
                 {
-                    var isInitialized = false;
-                    Stopwatch sw = new Stopwatch();
-                    sw.Start();
-                    while (true)
+                    try
                     {
                         if (ct.IsCancellationRequested)
                         {
@@ -80,10 +81,10 @@ namespace AlwaysLte
                             isInitialized = true;
                         }
                     }
-                }
-                catch (Exception e)
-                {
-                    logger.Error("Unexpected error inside execution: " + e);
+                    catch (Exception e)
+                    {
+                        logger.Error("Unexpected error inside execution: " + e);
+                    }
                 }
             }, ct);
 
