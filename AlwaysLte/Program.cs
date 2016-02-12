@@ -73,6 +73,7 @@ namespace AlwaysLte
 
                         if (sw.Elapsed.Seconds > configuration.MonitorIntervalSeconds || !isInitialized)
                         {
+                            logger.Trace("Monitoring health.");
                             MonitorHealth(rm, isInitialized, logger);
 
                             // Reset and start timer for next cycle
@@ -86,7 +87,7 @@ namespace AlwaysLte
                         logger.Error("Unexpected error inside execution: " + e);
                     }
                 }
-            }, ct);
+            }, ct, TaskCreationOptions.LongRunning, TaskScheduler.Current);
 
             logger.Info("Started");
             
