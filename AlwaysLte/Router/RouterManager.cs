@@ -50,7 +50,11 @@ namespace AlwaysLte.Router
             _website = new WebSite();
 
             _logger.Trace("Creating RouteManager... Done");
+
+            IsInitialized = true;
         }
+
+        public bool IsInitialized { get; private set; }
 
         private void InitJsEngine()
         {
@@ -99,6 +103,7 @@ namespace AlwaysLte.Router
                 var mode = match.Groups["mode"].Value;
                 return mode;
             }
+            _logger.Warn("Couldn't get proper connection type (<CurrentNetworkType> tag). Response was: {0}", status);
             return string.Empty;
         }
 
@@ -122,7 +127,7 @@ namespace AlwaysLte.Router
 
         private bool DoLogin()
         {
-            _logger.Trace("Login");
+            _logger.Debug("Login");
 
             LoadHomePageWithCsrf();
 
@@ -178,18 +183,34 @@ return restotal;
             var postResult = _website.PostPage(_loginPageUrl, postData);
             if (postResult.Contains("OK"))
             {
-                _logger.Trace("Login... Done!");
+                _logger.Debug("Login... Done!");
                 return true;
             }
-            _logger.Error("Logging in failed: {0}", postResult);
+
+            var errorMessage = ProcessErrorMessages(postResult);
+            _logger.Error("Logging in failed: {0}", errorMessage);
 
             return false;
+        }
+
+        private string ProcessErrorMessages(string postResult)
+        {
+            if (postResult.Contains("108006"))
+            {
+                return "Either username or password was incorrect. Check them in App.config";
+            }
+            if (postResult.Contains("100008"))
+            {
+                return "Some unknown error 100008 happened. Not sure why this happens yet. The application will probably try to login and fail all the time, until restarted.";
+            }
+            return postResult;
         }
 
         private void GetPublicKeys()
         {
             if (hasPublicKeys)
             {
+                _logger.Trace("We already have public keys, not loading them.");
                 return;
             }
 
@@ -199,6 +220,7 @@ return restotal;
             var rsaXmlResponse = rsaXmlObject.Element("response");
             _encpubkeyE = rsaXmlResponse.Element("encpubkeye").Value;
             _encpubkeyN = rsaXmlResponse.Element("encpubkeyn").Value;
+            _logger.Trace("Public Key E: {0}, N: {1}", _encpubkeyE, _encpubkeyN.Remove(4) + "..." + _encpubkeyN.Substring(_encpubkeyN.Length-4));
 
             Jurassic.ScriptSource scriptSource = new FileScriptSource("js/main.js");
             var jsResult = _engine.Evaluate(scriptSource);
@@ -265,7 +287,7 @@ return restotal;
                 {
                     return "No Service";
                 }
-                return string.Format("Uknown (#{0})", connectionTypeNumber);
+                return string.Format("Unknown (#{0})", connectionTypeNumber);
             }
         }
 

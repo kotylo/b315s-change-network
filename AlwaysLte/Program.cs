@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using AlwaysLte.Configuration;
@@ -42,11 +43,13 @@ namespace AlwaysLte
 
         static void Main(string[] args)
         {
+            DisableInputMode();
+
             var logger = NLog.LogManager.GetCurrentClassLogger();
             var configuration = new Config();
 
             logger.Info("Starting");
-            logger.Trace("Seeking interval is {0} seconds in config", configuration.MonitorIntervalSeconds);
+            logger.Debug("Seeking interval is {0} seconds in config", configuration.MonitorIntervalSeconds);
 
             CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             CancellationToken ct = cancellationTokenSource.Token;
@@ -66,14 +69,20 @@ namespace AlwaysLte
                     {
                         if (ct.IsCancellationRequested)
                         {
-                            logger.Trace("Requested cancellation. Exiting...");
+                            logger.Info("Requested cancellation. Exiting...");
                             break;
                         }
                         Thread.Sleep(500);
 
-                        if (sw.Elapsed.Seconds > configuration.MonitorIntervalSeconds || !isInitialized)
+                        if ((sw.Elapsed.Seconds > configuration.MonitorIntervalSeconds || !isInitialized) && rm.IsInitialized)
                         {
-                            logger.Trace("Monitoring health.");
+                            if (isInitialized)
+                            {
+                                Console.Write("\r> Monitoring health. Latest update at ");
+                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                Console.Write("{0} {1}", DateTime.Now.ToShortDateString(), DateTime.Now.ToLongTimeString());
+                                Console.ResetColor();
+                            }
                             MonitorHealth(rm, isInitialized, logger);
 
                             // Reset and start timer for next cycle
@@ -98,6 +107,18 @@ namespace AlwaysLte
             logger.Info("Exit completed.");
         }
 
+        #region Hack to disable input mode
+        // http://msdn.microsoft.com/en-us/library/ms686033(VS.85).aspx
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+        private const uint ENABLE_EXTENDED_FLAGS = 0x0080;
+        private static void DisableInputMode()
+        {
+            IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
+            SetConsoleMode(handle, ENABLE_EXTENDED_FLAGS);
+        } 
+        #endregion
+
         private static void MonitorHealth(RouterManager rm, bool isInitialized, ILogger logger)
         {
             string connectionType = rm.GetConnectionType();
@@ -107,6 +128,7 @@ namespace AlwaysLte
             }
             if (connectionType != RouterManager.ConnectionStatusType.LTE)
             {
+                Console.WriteLine();
                 logger.Info("Connection dropped to {0}. Switching.", RouterManager.ConnectionStatusType.Parse(connectionType));
                 // Switch to LTE
                 if (rm.Login())
