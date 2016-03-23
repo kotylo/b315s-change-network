@@ -103,7 +103,21 @@ namespace AlwaysLte.Router
                 var mode = match.Groups["mode"].Value;
                 return mode;
             }
-            _logger.Warn("Couldn't get proper connection type (<CurrentNetworkType> tag). Response was: {0}", status);
+
+            if (status.Contains("timed out"))
+            {
+                _logger.Warn("Response from server timed out.");
+            }
+            else if (status.Contains("125002"))
+            {
+                _logger.Warn("Probably router rebooted or Session Lost. Trying to load home page to get cookies again... ");
+                _website.LoadPage(_homePageUrl);
+            }
+            else
+            {
+                _logger.Warn("Couldn't get proper connection type (<CurrentNetworkType> tag). Response was: {0}", status);
+            }
+            
             return string.Empty;
         }
 

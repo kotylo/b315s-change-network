@@ -126,7 +126,7 @@ namespace AlwaysLte
             {
                 logger.Info("Current connection type is {0}. Monitoring...", RouterManager.ConnectionStatusType.Parse(connectionType));
             }
-            if (connectionType != RouterManager.ConnectionStatusType.LTE)
+            if (!string.IsNullOrEmpty(connectionType) && connectionType != RouterManager.ConnectionStatusType.LTE)
             {
                 Console.WriteLine();
                 logger.Info("Connection dropped to {0}. Switching.", RouterManager.ConnectionStatusType.Parse(connectionType));
