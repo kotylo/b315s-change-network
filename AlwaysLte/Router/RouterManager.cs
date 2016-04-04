@@ -111,6 +111,8 @@ namespace AlwaysLte.Router
             else if (status.Contains("125002"))
             {
                 _logger.Warn("Probably router rebooted or Session Lost. Trying to load home page to get cookies again... ");
+                
+                hasPublicKeys = false;
                 _website.LoadPage(_homePageUrl);
             }
             else
