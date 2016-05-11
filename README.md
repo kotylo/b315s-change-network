@@ -1,7 +1,7 @@
 # b315s-change-network
 Huawei B315s router automatic LTE signal recovery
 
-** More Information is available on [Wiki](https://github.com/kotylo/b315s-change-network/wiki) **
+## More Information is available on [Wiki](https://github.com/kotylo/b315s-change-network/wiki)
 
 This console application is looking at your local router and monitors the status of Huawei B315s-22.
 You can keep it running at the startup of the Windows.
