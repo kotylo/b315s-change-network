@@ -138,6 +138,16 @@ namespace AlwaysLte
                 }
                 logger.Info("Switching... Done!");
             }
+
+            if (rm.ShouldReboot())
+            {
+                if (rm.Login())
+                {
+                    rm.Reboot();
+                }
+            }
         }
+
+        
     }
 }

@@ -18,4 +18,6 @@ So what this Application does is:
 
 The temporary lost of Internet is predictable, but it usually doesn't take more than 1-5 seconds.
 
+There is also an option to reboot the router every day in case it helps with Google Nest Wifi being unresponsive after couple of days. I have found that it fixes this problem then.
+
 Enjoy!

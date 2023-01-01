@@ -1,4 +1,6 @@
-﻿namespace AlwaysLte.Configuration
+﻿using System;
+
+namespace AlwaysLte.Configuration
 {
     public interface IConfig
     {
@@ -6,5 +8,6 @@
         string Password { get; }
         string BaseUrl { get; }
         int MonitorIntervalSeconds { get; }
+        TimeSpan? RebootAt { get; }
     }
 }

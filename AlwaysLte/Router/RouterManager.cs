@@ -19,11 +19,13 @@ namespace AlwaysLte.Router
         private string _publicRsaKeyUrl;
         private string _loginPageUrl;
         private string _networkChangeUrl;
+        private string _rebootUrl;
         private string _connectionStatusUrl;
 
         private string _encpubkeyN;
         private string _encpubkeyE;
         private string _firstCsrf;
+        private DateTime _runAtDay;
         private bool hasPublicKeys = false;
 
         private Encoding _encoding = ASCIIEncoding.ASCII;
@@ -41,6 +43,7 @@ namespace AlwaysLte.Router
             _publicRsaKeyUrl = _config.BaseUrl + "/api/webserver/publickey";
             _loginPageUrl = _config.BaseUrl + "/api/user/login";
             _networkChangeUrl = _config.BaseUrl + "/api/net/net-mode";
+            _rebootUrl = _config.BaseUrl + "/api/device/control";
             _connectionStatusUrl = _config.BaseUrl + "/api/monitoring/status";
 
             _logger.Trace("Initializing JS engine");
@@ -49,12 +52,23 @@ namespace AlwaysLte.Router
 
             _website = new WebSite();
 
+            if (_config.RebootAt.HasValue)
+            {
+                _runAtDay = FindNextRunDay();
+            }
+
             _logger.Trace("Creating RouteManager... Done");
 
             IsInitialized = true;
         }
 
         public bool IsInitialized { get; private set; }
+        public bool Rebooted { get; internal set; }
+
+        private DateTime FindNextRunDay()
+        {
+            return DateTime.Now > DateTime.Today + _config.RebootAt.Value ? DateTime.Today.AddDays(1) : DateTime.Today;
+        }
 
         private void InitJsEngine()
         {
@@ -166,35 +180,10 @@ password_type: g_password_type
 var xmlDate = object2xml('request', request);";
 
             _engine.Evaluate(requestJs);
-            
-            // Show the xmlDate in console
-            //_engine.Evaluate("console.log(xmlDate);");
 
-            
-            //var rsaData = engine.Evaluate("doRSAEncrypt(xmlDate)");
-            var rsaData = _engine.Evaluate("xmlDate");
-
-
-
-
-            /*
-             encstring = base64_encode(encstring);
-var num = encstring.length / 245;
-var restotal = '';
-for (i = 0; i < num; i++) {
-    var encdata = encstring.substr(i * 245, 245);
-    var res = rsa.encrypt(encdata);
-    restotal += res;
-}
-return restotal;
-                 
-             */
-
-            // Get the RSA encryption for login
-            var data = EncodeData(rsaData.ToString());
+            var data = _engine.Evaluate("xmlDate").ToString();
             var postData = new PostData(data)
-                .AddHeader("__RequestVerificationToken", _firstCsrf)
-                .AddHeader("encrypt_transmit", "encrypt_transmit");
+                .AddHeader("__RequestVerificationToken", _firstCsrf);
 
             var postResult = _website.PostPage(_loginPageUrl, postData);
             if (postResult.Contains("OK"))
@@ -206,6 +195,22 @@ return restotal;
             var errorMessage = ProcessErrorMessages(postResult);
             _logger.Error("Logging in failed: {0}", errorMessage);
 
+            return false;
+        }
+
+        internal bool ShouldReboot()
+        {
+            if (_config.RebootAt == null)
+            {
+                return false;
+            }
+
+            var runAt = _runAtDay + _config.RebootAt.Value;
+            if (DateTime.Now > runAt && DateTime.Now <= runAt.AddSeconds(_config.MonitorIntervalSeconds))
+            {
+                _runAtDay = DateTime.Today.AddDays(1);
+                return true;
+            }
             return false;
         }
 
@@ -330,6 +335,25 @@ return restotal;
             _logger.Error("Switching to {0}... Failed!", verboseType);
             _logger.Error("Response was: {0}", result);
 
+            return false;
+        }
+
+        /// <summary>
+        /// Reboots router
+        /// </summary>
+        internal bool Reboot()
+        {
+            LoadHomePageWithCsrf();
+
+            _logger.Info("Rebooting");
+            var dataToSend = string.Format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><Control>1</Control></request>");
+            var result = _website.PostPage(_rebootUrl, new PostData(dataToSend).AddHeader("__RequestVerificationToken", _firstCsrf));
+            if (result.Contains("OK"))
+            {
+                _logger.Info("Rebooting... Done!");
+                Rebooted = true;
+                return true;
+            }
             return false;
         }
     }

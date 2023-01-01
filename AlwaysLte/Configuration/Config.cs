@@ -24,5 +24,17 @@ namespace AlwaysLte.Configuration
         {
             get { return Int32.Parse(ConfigurationManager.AppSettings["monitorIntervalSeconds"]); }
         }
+
+        public TimeSpan? RebootAt
+        {
+            get
+            {
+                if (TimeSpan.TryParse(ConfigurationManager.AppSettings["rebootAt"], out TimeSpan result))
+                {
+                    return result;
+                }
+                return null;
+            }
+        }
     }
 }
