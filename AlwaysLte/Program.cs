@@ -82,6 +82,10 @@ namespace AlwaysLte
                                 Console.ForegroundColor = ConsoleColor.Yellow;
                                 Console.Write("{0} {1}", DateTime.Now.ToShortDateString(), DateTime.Now.ToLongTimeString());
                                 Console.ResetColor();
+                                if (rm.RebootAtDateTime.HasValue) {
+                                    Console.Write(" Rebooting at: ");
+                                    Console.Write(rm.RebootAtDateTime.Value);
+                                }
                             }
                             MonitorHealth(rm, isInitialized, logger);
 

@@ -65,6 +65,8 @@ namespace AlwaysLte.Router
         public bool IsInitialized { get; private set; }
         public bool Rebooted { get; internal set; }
 
+        public DateTime? RebootAtDateTime => _config.RebootAt.HasValue ? _runAtDay + _config.RebootAt.Value : (DateTime?) null;
+
         private DateTime FindNextRunDay()
         {
             return DateTime.Now > DateTime.Today + _config.RebootAt.Value ? DateTime.Today.AddDays(1) : DateTime.Today;
@@ -142,7 +144,8 @@ namespace AlwaysLte.Router
             var cookie = _website.GetCookies().Get("SessionID");
             if (cookie == null || force)
             {
-                _website.LoadPage(_homePageUrl);
+                var rootPage = _website.LoadPage(_config.BaseUrl);
+                var loadedPage = _website.LoadPage(_homePageUrl);
                 GetPublicKeys();
             }
         }
@@ -205,8 +208,7 @@ var xmlDate = object2xml('request', request);";
                 return false;
             }
 
-            var runAt = _runAtDay + _config.RebootAt.Value;
-            if (DateTime.Now > runAt && DateTime.Now <= runAt.AddSeconds(_config.MonitorIntervalSeconds))
+            if (DateTime.Now > RebootAtDateTime.Value && DateTime.Now <= RebootAtDateTime.Value.AddSeconds(_config.MonitorIntervalSeconds*2))
             {
                 _runAtDay = DateTime.Today.AddDays(1);
                 return true;
@@ -239,6 +241,10 @@ var xmlDate = object2xml('request', request);";
             var rsaPage = _website.LoadPage(_publicRsaKeyUrl);
             var rsaXmlObject = XDocument.Parse(rsaPage);
             var rsaXmlResponse = rsaXmlObject.Element("response");
+            if (rsaXmlResponse == null)
+            {
+                _logger.Warn($"Got wrong xml while getting public keys: {rsaPage}. Try loading the page in browser manually?");
+            }
             _encpubkeyE = rsaXmlResponse.Element("encpubkeye").Value;
             _encpubkeyN = rsaXmlResponse.Element("encpubkeyn").Value;
             _logger.Trace("Public Key E: {0}, N: {1}", _encpubkeyE, _encpubkeyN.Remove(4) + "..." + _encpubkeyN.Substring(_encpubkeyN.Length-4));
